@@ -4,10 +4,12 @@ library(tidymodels)
 library(DataExplorer)
 library(vroom)
 library(patchwork)
+library(poissonreg)
 
 # Read in training data
 bike_training_data <- vroom('train.csv')
 
+## Cleaning and organizing data ##
 # Clean tidy up training data
 bike_training_data <- bike_training_data |>
   select(-casual, -registered)
@@ -71,6 +73,7 @@ temp_histogram <- ggplot(bike_training_data, aes(x=humidity)) +
 # Put the four plots together
 (weather_barplot + working_day_plot) / (temp_atemp_corr + temp_histogram)
 
+## Linear Regression ##
 # Set up linear regression model
 linear_model <- linear_reg() |>
   set_engine('lm') |>
@@ -91,3 +94,24 @@ kaggle_submission <- lm_predictions %>%
 
 ## Write out the file
 vroom_write(x = kaggle_submission, file = "./Linear_Predictions.csv", delim = ",")
+
+## Poisson Regression ##
+# Set up poisson regression model
+poisson_model <- poisson_reg() |>
+  set_engine('glm') |>
+  set_mode('regression') |>
+  fit(formula=count~., data=bike_training_data)
+
+# Make predictions
+pois_predictions <- predict(poisson_model,
+                            new_data = bike_test_data)
+
+## Format the Predictions for Submission to Kaggle
+pois_kaggle_submission <- pois_predictions %>%
+  bind_cols(., bike_test_data) %>% # Bind predictions with test data
+  select(datetime, .pred) %>% # Just keep datetime and prediction variables
+  rename(count = .pred) %>% # Rename to count (for submission to Kaggle)
+  mutate(datetime = as.character(format(datetime))) # Needed for right format to Kaggle
+
+# Write out the file
+vroom_write(x = pois_kaggle_submission, file = "./Poisson_Predictions.csv", delim = ",")
