@@ -10,9 +10,16 @@ library(poissonreg)
 bike_training_data <- vroom('train.csv')
 
 ## Cleaning and organizing data ##
-# Clean tidy up training data
+# Clean and tidy up training data
 bike_training_data <- bike_training_data |>
   select(-casual, -registered)
+# Create recipe
+model_recipe <- recipe(count~., data = bike_training_data) |>
+  step_mutate(weather=factor(weather, levels=c(1,2,3,4))) |>
+  
+
+
+
 bike_training_data$season <- factor(bike_training_data$season,
                                     levels = c(1,2,3,4),
                                     labels = c('Spring', 'Summer', 
