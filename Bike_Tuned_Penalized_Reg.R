@@ -84,3 +84,6 @@ kaggle_submission <- tuned_penalized_preds %>%
   rename(count = .pred) %>% # Rename to count (for submission to Kaggle)
   mutate(count = pmax(0, count)) %>% # Pointwise max of (0, prediction)
   mutate(datetime = as.character(format(datetime))) # Needed for right format to Kaggle
+
+# Write out the file
+vroom_write(x = kaggle_submission, file = "./Tuned_Penalized_Regression.csv", delim = ",")
