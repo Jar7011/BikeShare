@@ -3,7 +3,7 @@ library(tidyverse)
 library(tidymodels)
 library(vroom)
 
-## Regression Tree ##
+## Regression Tree Model ##
 
 # Read in training data
 bike_training_data <- vroom('train.csv')
