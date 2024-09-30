@@ -62,3 +62,53 @@ penalized_red_models <- penalized_reg_wf %>%
 
 # Random forest model
 
+# Create random forest model
+rand_forest_model <- rand_forest(mtry = tune(),
+                                 min_n = tune(),
+                                 trees = 1000) %>% 
+  set_engine('ranger') %>% 
+  set_mode('regression')
+
+# Set workflow
+rand_forest_wf <- workflow() %>% 
+  add_recipe(model_recipe) %>% 
+  add_model(rand_forest_model)
+
+# Grid of values to tune over
+prep(model_recipe) %>% bake(bike_training_data) %>% ncol() # = 10
+rand_forest_grid_params <- grid_regular(mtry(range = c(1, 10)),
+                                        min_n(),
+                                        levels = 5)
+
+# Run the cv
+rand_forest_models <- rand_forest_wf %>% 
+  tune_grid(resamples = folds,
+            grid = rand_forest_grid_params,
+            metrics = metric_set(rmse),
+            control = untuned_model) 
+
+# Specify which models to include
+my_stack <- stacks() %>% 
+  add_candidates(penalized_red_models) %>% 
+  add_candidates(rand_forest_models)
+
+# Fit the stacked model
+stacked_model <- my_stack %>% 
+  blend_predictions() %>% 
+  fit_members()
+
+# Make predictions
+stacked_model_preds <- stacked_model %>% 
+  predict(new_data=bike_test_data) %>% 
+  mutate(.pred = exp(.pred))
+
+# Format the Predictions for Submission to Kaggle
+kaggle_submission <- stacked_model_preds %>%
+  bind_cols(., bike_test_data) %>% # Bind predictions with test data
+  select(datetime, .pred) %>% # Just keep datetime and prediction variables
+  rename(count = .pred) %>% # Rename to count (for submission to Kaggle)
+  mutate(count = pmax(0, count)) %>% # Pointwise max of (0, prediction)
+  mutate(datetime = as.character(format(datetime))) # Needed for right format to Kaggle
+
+# Write out the file
+vroom_write(x = kaggle_submission, file = "./Stacking_Models.csv", delim = ",")
