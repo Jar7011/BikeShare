@@ -112,3 +112,5 @@ kaggle_submission <- stacked_model_preds %>%
 
 # Write out the file
 vroom_write(x = kaggle_submission, file = "./Stacking_Models.csv", delim = ",")
+
+## Score: 0.44126
